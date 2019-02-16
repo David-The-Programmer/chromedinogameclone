@@ -4,7 +4,6 @@ class Obstacle {
     this.y = y;
     this.width = w;
     this.height = h;
-    this.velocity;
   }
 
   draw(img) {
@@ -12,8 +11,7 @@ class Obstacle {
   }
 
   move(s) {
-    this.velocity = s;
-    this.x += this.velocity;
+    this.x += s;
   }
 
 }

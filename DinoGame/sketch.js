@@ -10,6 +10,12 @@ const DINO_WIDTH = 36;
 // Height of the Dino
 const DINO_HEIGHT = 42;
 
+// width of the dino when ducking
+const DINO_DUCK_WIDTH = 50;
+
+// height of the dino when ducking
+const DINO_DUCK_HEIGHT = 26;
+
 // x position of the dino
 const X_OF_DINO = 100;
 
@@ -26,22 +32,35 @@ const LIFT = -1.1;
 const GRAVITY = 0.4;
 
 // minimum width of the obstacle
-const MIN_OBS_WIDTH = 15;
+const MIN_CACTUS_WIDTH = 15;
 
 // minimum HEIGHT of the obstacle
-const MIN_OBS_HEIGHT = 30;
+const MIN_CACTUS_HEIGHT = 30;
 
 // mid width of the obstacle
-const MID_OBS_WIDTH = 30;
+const MID_CACTUS_WIDTH = 30;
 
 // mid HEIGHT of the obstacle
-const MID_OBS_HEIGHT = 20;
+const MID_CACTUS_HEIGHT = 20;
 
 // maximum width of the obstacle
-const MAX_OBS_WIDTH = 20;
+const MAX_CACTUS_WIDTH = 20;
 
 // maximum HEIGHT of the obstacle
-const MAX_OBS_HEIGHT = 40;
+const MAX_CACTUS_HEIGHT = 40;
+
+const BIRD_WIDTH = 40;
+
+const BIRD_HEIGHT = 34;
+
+// y coordinate of the line above the ground
+const Y_OF_GROUND_LINE = Y_OF_GROUND - 5;
+
+// diameter of the dirt
+const DIRT_DIAMETER = 0.5;
+
+// minimum distance between each speck of dirt
+const MIN_DIST_BTWN_DIRT = 10;
 
 
 // minimum width between each obstacles
@@ -55,24 +74,30 @@ function preload() {
   manySmallCactusImg = loadImage('data/cactusSmallMany0000.png');
   largeCactusImg = loadImage('data/cactusBig0000.png');
   dinoDeadImg = loadImage('data/dinoDead0000.png');
+  dinoDuckImg1 = loadImage('data/dinoduck0000.png');
+  dinoDuckImg2 = loadImage('data/dinoduck0001.png');
+  birdImg1 = loadImage('data/berd.png');
+  birdImg2 = loadImage('data/berd2.png');
 }
 
 function setup() {
-  createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+  canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+  // position the whole canvas
+  canvas.position((windowWidth / 2) - (CANVAS_WIDTH / 2),  (windowHeight / 2) - CANVAS_HEIGHT);
   dino = new Dino(X_OF_DINO, Y_OF_DINO, DINO_WIDTH, DINO_HEIGHT, 0);
-  obstacle.push(new Obstacle(CANVAS_WIDTH, Y_OF_GROUND - MID_OBS_HEIGHT, MID_OBS_WIDTH, MID_OBS_HEIGHT));
+  obstacle.push(new Obstacle(CANVAS_WIDTH, Y_OF_GROUND - MID_CACTUS_HEIGHT, MID_CACTUS_WIDTH, MID_CACTUS_HEIGHT));
 }
 
 function draw() {
   background(255);
   stroke(0);
-  line(0, Y_OF_GROUND, CANVAS_WIDTH, Y_OF_GROUND);
+  line(0, Y_OF_GROUND_LINE, CANVAS_WIDTH, Y_OF_GROUND_LINE);
   dinoMovement();
   checkForCollision();
 
 
 
-  // since the game (i assume) run at 30 fps, thus for every 1/6 second, check if the space between the previous obstacle
+  // since the game (i assume) run at 60 fps, thus for every 1/6 second, check if the space between the previous obstacle
   // and the new obstacle is >= than the min distance to prevent the obstacles for being too close
   if(frameCount % 10 == 0) {
     if(obstacle.length != 0) {
@@ -95,6 +120,9 @@ function draw() {
   obstacleMovement();
   removeObstacles();
 
+  timer++;
+
+  fill(0);
   text("Score: " + score, CANVAS_WIDTH * 9/10, CANVAS_HEIGHT / 3);
   score++;
 
@@ -106,9 +134,51 @@ function draw() {
 
 function dinoMovement() {
   if(collide) {
+    // if the dino is in ducking mode while colliding with any obstacle, reset its dimensions and y coordinate to default
+    if(dino.width == DINO_DUCK_WIDTH) {
+      dino.width = DINO_WIDTH;
+      dino.height = DINO_HEIGHT;
+      dino.y = Y_OF_DINO;
+    }
     dino.draw(dinoDeadImg);
     noLoop();
+  } else if(keyIsPressed && keyCode == DOWN_ARROW && jumpSequence == 0) {
+    dino.width = DINO_DUCK_WIDTH;
+    dino.height = DINO_DUCK_HEIGHT;
+    dino.y = Y_OF_DINO + (DINO_HEIGHT - DINO_DUCK_HEIGHT);
+    if(timer >= 0 && timer < 5 ) {
+      dino.draw(dinoDuckImg1);
+    } else if(timer >= 5 && timer < 10) {
+      dino.draw(dinoDuckImg2);
+    } else {
+      timer = 0;
+      dino.draw(dinoDuckImg1);
+    }
+
+    // if the player has pressed the down key and jumpSequence == 0, set it to 1 to indicate that the dino goes upwards
+  } else if(keyIsPressed && jumpSequence == 0 && keyCode == UP_ARROW) {
+    jumpSequence = 1;
+    // extremely impt to do this to prevent the flickering problem of the program not drawing the dino for one frame
+    dino.draw(dinoJumpImg);
+
+  } else if(jumpSequence == 1) {
+    // while the dino has not reached the maximum height, continue to lift dino
+    if(dino.y > CANVAS_HEIGHT / 3) {
+      dino.draw(dinoJumpImg);
+      dino.lift(upwardForce);
+      dino.y += dino.velocity;
+      checkJumpSequence();
+      upwardForce += 0.05;
+    }
+  } else if(jumpSequence == 2 && dino.y + DINO_HEIGHT < Y_OF_GROUND) {
+    dino.draw(dinoJumpImg);
+    dino.fall(downwardForce);
+    dino.y += dino.velocity;
+    checkJumpSequence();
   } else {
+    dino.width = DINO_WIDTH;
+    dino.height = DINO_HEIGHT;
+    dino.y = Y_OF_DINO;
     if(timer >= 0 && timer < 5 ) {
       dino.draw(dinoRunImg1);
     } else if(timer >= 5 && timer < 10) {
@@ -118,33 +188,9 @@ function dinoMovement() {
       dino.draw(dinoRunImg1);
     }
 
-    // if the player has pressed the key and jumpSequence == 0, set it to 1 to indicate that the dino goes upwards
-    if(keyIsPressed && jumpSequence == 0) {
-      jumpSequence = 1;
-    } else if(jumpSequence == 1) {
-      // while the dino has not reached the maximum height, continue to lift dino
-      if(dino.y > CANVAS_HEIGHT / 3) {
-        dino.draw(dinoJumpImg);
-        dino.lift(upwardForce);
-        dino.y += dino.velocity;
-        checkJumpSequence();
-        upwardForce += 0.05;
-      }
-    }
-
-    // if jumpSequence == 2, the dino has reached the max height and now should fall
-    if(jumpSequence == 2 && dino.y + DINO_HEIGHT < Y_OF_GROUND) {
-      dino.draw(dinoJumpImg);
-      dino.fall(downwardForce);
-      dino.y += dino.velocity;
-      checkJumpSequence();
-    }
-    timer++;
   }
-
-
-
 }
+
 
 // function to check the sequences of the jump sequence
 function checkJumpSequence() {
@@ -166,14 +212,23 @@ function checkJumpSequence() {
   }
 }
 
-// function to check for collision between dino and obstacle
+// function to check for collision between dino and obstacles
 function checkForCollision() {
   for(let i = 0; i < obstacle.length; i++) {
-    if(dino.x + DINO_WIDTH > obstacle[i].x + (obstacle[i].width / 4) && dino.x < obstacle[i].x + (obstacle[i].width * (3/4)) ) {
-      if(dino.y + DINO_HEIGHT > obstacle[i].y + (obstacle[i].height / 4)) {
-        collide = true;
+    if(obstacle[i].width == BIRD_WIDTH && obstacle[i].height == BIRD_HEIGHT) {
+      if(dino.x + dino.width > obstacle[i].x + (obstacle[i].width / 3) && dino.x < obstacle[i].x + (obstacle[i].width * (2/3)) ) {
+        if(dino.y < obstacle[i].y + (obstacle[i].height * (2/3)) && dino.y + dino.height > obstacle[i].y + (obstacle[i].width / 3)) {
+          collide = true;
+        }
+      }
+    } else {
+      if(dino.x + dino.width > obstacle[i].x + (obstacle[i].width / 3) && dino.x < obstacle[i].x + (obstacle[i].width * (2/3)) ) {
+        if(dino.y + dino.height > obstacle[i].y + (obstacle[i].height / 3)) {
+          collide = true;
+        }
       }
     }
+
   }
 
 
@@ -182,12 +237,24 @@ function checkForCollision() {
 // function for the movement of the obstacles
 function obstacleMovement() {
   for(let i = 0; i < obstacle.length; i++) {
-    if(obstacle[i].height == MIN_OBS_HEIGHT) {
+    if(obstacle[i].width == MIN_CACTUS_WIDTH && obstacle[i].height == MIN_CACTUS_HEIGHT) {
       obstacle[i].draw(smallCactusImg);
-    } else if(obstacle[i].height == MID_OBS_HEIGHT) {
+
+    } else if(obstacle[i].width == MID_CACTUS_WIDTH && obstacle[i].height == MID_CACTUS_HEIGHT) {
       obstacle[i].draw(manySmallCactusImg);
-    } else if(obstacle[i].height == MAX_OBS_HEIGHT){
+
+    } else if(obstacle[i].width == MAX_CACTUS_WIDTH && obstacle[i].height == MAX_CACTUS_HEIGHT){
       obstacle[i].draw(largeCactusImg);
+      
+    } else if(obstacle[i].width == BIRD_WIDTH && obstacle[i].height == BIRD_HEIGHT) {
+      if(timer >= 0 && timer < 5 ) {
+        obstacle[i].draw(birdImg1);
+      } else if(timer >= 5 && timer < 10) {
+        obstacle[i].draw(birdImg2);
+      } else {
+        timer = 0;
+        obstacle[i].draw(birdImg1);
+      }
     }
     obstacle[i].move(obstacleSpeed);
 
@@ -198,27 +265,51 @@ function obstacleMovement() {
 // function for creating more obstacles
 function createObstacle() {
   pickObstacleDimensions();
-  obstacle.push(new Obstacle(CANVAS_WIDTH + Math.floor(random(0, 120)), Y_OF_GROUND - obstacleHeight, obstacleWidth, obstacleHeight));
+  obstacle.push(new Obstacle(CANVAS_WIDTH + Math.floor(random(0, 120)), yOfObstacles, obstacleWidth, obstacleHeight));
 }
 
 // function to determine the width and height of the obstacle
 function pickObstacleDimensions() {
-  // variable to decide which of the three dimensions to use for creating the obstacle
-  let dimensionIndex = Math.floor(random(0, 3));
+  // variable to decide which of the four dimensions to use for creating the obstacle
+  let dimensionOfIndex = Math.floor(random(0, 4));
 
-  if(dimensionIndex == 0) {
-    obstacleWidth = MIN_OBS_WIDTH;
-    obstacleHeight = MIN_OBS_HEIGHT;
+  if(dimensionOfIndex == 0) {
+    obstacleWidth = MIN_CACTUS_WIDTH;
+    obstacleHeight = MIN_CACTUS_HEIGHT;
+    yOfObstacles = Y_OF_GROUND - obstacleHeight;
 
-  } else if(dimensionIndex == 1) {
-    obstacleWidth = MID_OBS_WIDTH;
-    obstacleHeight = MID_OBS_HEIGHT;
+  } else if(dimensionOfIndex == 1) {
+    obstacleWidth = MID_CACTUS_WIDTH;
+    obstacleHeight = MID_CACTUS_HEIGHT;
+    yOfObstacles = Y_OF_GROUND - obstacleHeight;
 
-  } else {
-    obstacleWidth = MAX_OBS_WIDTH;
-    obstacleHeight = MAX_OBS_HEIGHT;
+  } else if(dimensionOfIndex == 2) {
+    obstacleWidth = MAX_CACTUS_WIDTH;
+    obstacleHeight = MAX_CACTUS_HEIGHT;
+    yOfObstacles = Y_OF_GROUND - obstacleHeight;
+
+  } else if(dimensionOfIndex == 3) {
+    obstacleWidth = BIRD_WIDTH;
+    obstacleHeight = BIRD_HEIGHT;
+    pickYOfBird();
+
   }
 }
+
+ // function to pick the y coordinates of the birds
+ function pickYOfBird() {
+   let yOfBird = Math.floor(random(0, 3));
+   // zero being the lowest height the bird is placed at, let the bird be just above the ground
+   if(yOfBird == 0) {
+     yOfObstacles = Y_OF_GROUND - obstacleHeight;
+
+   } else if(yOfBird == 1) {
+     yOfObstacles = Y_OF_GROUND - DINO_DUCK_HEIGHT - obstacleHeight;
+
+   } else {
+     yOfObstacles = Y_OF_GROUND - DINO_HEIGHT - obstacleHeight;
+   }
+ }
 
 // function for removing the obstacles
 function removeObstacles() {
@@ -229,6 +320,7 @@ function removeObstacles() {
   }
 
 }
+
 
 // dino object
 let dino;
@@ -245,19 +337,30 @@ let dinoJumpImg;
 // dino dead img
 let dinoDeadImg;
 
+let dinoDuckImg1;
+
+let dinoDuckImg2;
+
 let smallCactusImg;
 
 let manySmallCactusImg;
 
 let largeCactusImg;
 
+let birdImg1;
+
+let birdImg2;
+
 // obstacle objects
 let obstacle = [];
 
 let jumpSequence = 0;
 
+// y coordinate of the obstacles
+let yOfObstacles;
+
 // obstacleWidth
-let obstacleWidth = MID_OBS_WIDTH;
+let obstacleWidth = MID_CACTUS_WIDTH;
 
 // obstacleHeight
 let obstacleHeight;
@@ -277,3 +380,6 @@ let timer = 0;
 let collide = false;
 
 let score = 0;
+
+// canvas object
+let canvas;

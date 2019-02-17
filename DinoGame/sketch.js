@@ -59,10 +59,6 @@ const Y_OF_GROUND_LINE = Y_OF_GROUND - 5;
 // diameter of the dirt
 const DIRT_DIAMETER = 0.5;
 
-// minimum distance between each speck of dirt
-const MIN_DIST_BTWN_DIRT = 10;
-
-
 // minimum width between each obstacles
 const MIN_DIST_BTWN_OBS = DINO_WIDTH * 8;
 
@@ -82,8 +78,10 @@ function preload() {
 
 function setup() {
   canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
-  // position the whole canvas
   canvas.position((windowWidth / 2) - (CANVAS_WIDTH / 2),  (windowHeight / 2) - CANVAS_HEIGHT);
+  instructions = createP('Press on the up arrow key to make the dino jump, down arrow key to make the dino duck');
+  instructions.position(canvas.x, canvas.y + CANVAS_HEIGHT);
+
   dino = new Dino(X_OF_DINO, Y_OF_DINO, DINO_WIDTH, DINO_HEIGHT, 0);
   obstacle.push(new Obstacle(CANVAS_WIDTH, Y_OF_GROUND - MID_CACTUS_HEIGHT, MID_CACTUS_WIDTH, MID_CACTUS_HEIGHT));
 }
@@ -108,12 +106,12 @@ function draw() {
 
   }
 
-  obstacleSpeed -= 0.002;
+  obstacleSpeed -= 0.0002;
 
- // every 10 seconds, increase both the lift and gravity to allow to player to adapt to increasing speed of the obstacles
-  if(frameCount % 600 == 0) {
-    downwardForce += 0.01;
-    startingUpwardForce -= 0.01;
+ // every 5 seconds, increase both the lift and gravity to allow to player to adapt to increasing speed of the obstacles
+  if(frameCount % 300 == 0) {
+    downwardForce += 0.002;
+    startingUpwardForce -= 0.002;
 
   }
 
@@ -124,11 +122,31 @@ function draw() {
 
   fill(0);
   text("Score: " + score, CANVAS_WIDTH * 9/10, CANVAS_HEIGHT / 3);
+  text("High Score: " + highScore, CANVAS_WIDTH * 7/10, CANVAS_HEIGHT / 3);
+
+  // previous score is needed to ensure that highScore would reflect the correct high score
+  previousScore = score;
   score++;
 
 
 
 
+
+}
+ // function for just resetting the game
+function keyPressed() {
+  if(collide && (keyCode == UP_ARROW || keyCode == DOWN_ARROW)) {
+    removeAllObstacles();
+    dino.draw(dinoRunImg1);
+    collide = false;
+    if(previousScore > highScore) {
+      highScore = previousScore;
+    }
+
+    resetVariables();
+    createObstacle();
+    loop();
+  }
 
 }
 
@@ -141,6 +159,7 @@ function dinoMovement() {
       dino.y = Y_OF_DINO;
     }
     dino.draw(dinoDeadImg);
+    text("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     noLoop();
   } else if(keyIsPressed && keyCode == DOWN_ARROW && jumpSequence == 0) {
     dino.width = DINO_DUCK_WIDTH;
@@ -245,7 +264,7 @@ function obstacleMovement() {
 
     } else if(obstacle[i].width == MAX_CACTUS_WIDTH && obstacle[i].height == MAX_CACTUS_HEIGHT){
       obstacle[i].draw(largeCactusImg);
-      
+
     } else if(obstacle[i].width == BIRD_WIDTH && obstacle[i].height == BIRD_HEIGHT) {
       if(timer >= 0 && timer < 5 ) {
         obstacle[i].draw(birdImg1);
@@ -311,7 +330,7 @@ function pickObstacleDimensions() {
    }
  }
 
-// function for removing the obstacles
+// function for removing the obstacles from the screen
 function removeObstacles() {
   if(obstacle[0] != null) {
     if(obstacle[0].x + obstacle[0].width <= 0) {
@@ -320,6 +339,25 @@ function removeObstacles() {
   }
 
 }
+
+// function to remove all obstacles
+function removeAllObstacles() {
+  for(let i = obstacle.length; i >= 0; i--) {
+    obstacle.splice(i, 1);
+  }
+}
+
+// function to reset variables invloved with the movement of the dino and obstacles
+function resetVariables() {
+  score = 0;
+  jumpSequence = 0;
+  obstacleSpeed = -8
+  upwardForce = LIFT;
+  startingUpwardForce = LIFT;
+  downwardForce = GRAVITY;
+  timer = 0;
+}
+
 
 
 // dino object
@@ -366,7 +404,7 @@ let obstacleWidth = MID_CACTUS_WIDTH;
 let obstacleHeight;
 
 // obstacle speed
-let obstacleSpeed = -5;
+let obstacleSpeed = -8;
 
 let upwardForce = LIFT;
 
@@ -383,3 +421,9 @@ let score = 0;
 
 // canvas object
 let canvas;
+
+let previousScore;
+
+let highScore = 0;
+
+let instructions;

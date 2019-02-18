@@ -79,8 +79,8 @@ function preload() {
 function setup() {
   canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   canvas.position((windowWidth / 2) - (CANVAS_WIDTH / 2),  (windowHeight / 2) - CANVAS_HEIGHT);
-  instructions = createP('Press on the up arrow key to make the dino jump, down arrow key to make the dino duck');
-  instructions.position(canvas.x, canvas.y + CANVAS_HEIGHT);
+  instructions = createP('Press on the up arrow key to make the dino jump, press on the down arrow key to make the dino duck');
+  instructions.position(canvas.x + CANVAS_WIDTH / 12 , canvas.y + CANVAS_HEIGHT);
 
   dino = new Dino(X_OF_DINO, Y_OF_DINO, DINO_WIDTH, DINO_HEIGHT, 0);
   obstacle.push(new Obstacle(CANVAS_WIDTH, Y_OF_GROUND - MID_CACTUS_HEIGHT, MID_CACTUS_WIDTH, MID_CACTUS_HEIGHT));
@@ -159,7 +159,7 @@ function dinoMovement() {
       dino.y = Y_OF_DINO;
     }
     dino.draw(dinoDeadImg);
-    text("Game Over", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+    text("Game Over", CANVAS_WIDTH / 2 - CANVAS_WIDTH / 20, CANVAS_HEIGHT / 2);
     noLoop();
   } else if(keyIsPressed && keyCode == DOWN_ARROW && jumpSequence == 0) {
     dino.width = DINO_DUCK_WIDTH;
